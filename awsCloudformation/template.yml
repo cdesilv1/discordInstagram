@@ -1,0 +1,206 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Infrastructure for Instagram to Discord image posting pipeline'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: 'dev'
+    Description: 'Environment name (dev, staging, prod)'
+  
+  DiscordBotToken:
+    Type: String
+    NoEcho: true
+    Description: 'Discord bot token'
+    
+  DiscordChannelId:
+    Type: String
+    Description: 'Discord channel ID where images will be posted'
+
+Resources:
+  # S3 Bucket for storing Instagram images
+  InstagramImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${EnvironmentName}-instagram-images-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt ImageProcessorLambda.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: .jpg
+                  - Name: suffix
+                    Value: .jpeg
+                  - Name: suffix
+                    Value: .png
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+
+  # SQS Queue for image processing
+  ImageProcessingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${EnvironmentName}-instagram-image-queue'
+      VisibilityTimeoutSeconds: 300
+      MessageRetentionPeriod: 1209600  # 14 days
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ImageProcessingDLQ.Arn
+        maxReceiveCount: 3
+
+  # Dead Letter Queue for failed messages
+  ImageProcessingDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${EnvironmentName}-instagram-image-dlq'
+      MessageRetentionPeriod: 1209600  # 14 days
+
+  # IAM Role for Lambda function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-instagram-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: !Sub '${InstagramImagesBucket}/*'
+        - PolicyName: SQSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt ImageProcessingQueue.Arn
+
+  # IAM Role for EC2 Discord Bot
+  EC2DiscordBotRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-discord-bot-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SQSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt ImageProcessingQueue.Arn
+
+  # Instance Profile for EC2
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2DiscordBotRole
+
+  # Lambda function for processing S3 uploads
+  ImageProcessorLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${EnvironmentName}-instagram-image-processor'
+      Runtime: python3.12
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import urllib.parse
+          
+          def lambda_handler(event, context):
+              # Placeholder - actual code will be deployed separately
+              return {'statusCode': 200}
+      Environment:
+        Variables:
+          SQS_QUEUE_URL: !Ref ImageProcessingQueue
+          ENVIRONMENT: !Ref EnvironmentName
+      Timeout: 60
+
+  # Lambda permission for S3 to invoke
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ImageProcessorLambda
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub '${InstagramImagesBucket}/*'
+
+  # Systems Manager Parameters for configuration
+  DiscordBotTokenParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${EnvironmentName}/discord/bot-token'
+      Type: SecureString
+      Value: !Ref DiscordBotToken
+      Description: 'Discord bot token for Instagram image posting'
+
+  DiscordChannelIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${EnvironmentName}/discord/channel-id'
+      Type: String
+      Value: !Ref DiscordChannelId
+      Description: 'Discord channel ID for posting images'
+
+Outputs:
+  S3BucketName:
+    Description: 'Name of the S3 bucket for Instagram images'
+    Value: !Ref InstagramImagesBucket
+    Export:
+      Name: !Sub '${EnvironmentName}-instagram-s3-bucket'
+
+  SQSQueueUrl:
+    Description: 'URL of the SQS queue for image processing'
+    Value: !Ref ImageProcessingQueue
+    Export:
+      Name: !Sub '${EnvironmentName}-instagram-sqs-queue'
+
+  LambdaFunctionArn:
+    Description: 'ARN of the Lambda function'
+    Value: !GetAtt ImageProcessorLambda.Arn
+    Export:
+      Name: !Sub '${EnvironmentName}-instagram-lambda-arn'
+
+  EC2InstanceProfileArn:
+    Description: 'ARN of the EC2 instance profile for Discord bot'
+    Value: !GetAtt EC2InstanceProfile.Arn
+    Export:
+      Name: !Sub '${EnvironmentName}-discord-bot-instance-profile'

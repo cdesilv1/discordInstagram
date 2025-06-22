@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>Instagram Discord</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.yourcompany.instagram-discord</string>
+    <key>CFBundleName</key>
+    <string>InstagramDiscord</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>armv7</string>
+    </array>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    
+    <!-- URL Schemes for Instagram OAuth -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>instagram-oauth</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>instagram-discord-app</string>
+            </array>
+        </dict>
+    </array>
+    
+    <!-- App Transport Security -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>instagram.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+                <key>NSExceptionMinimumTLSVersion</key>
+                <string>TLSv1.0</string>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+            </dict>
+            <key>facebook.com</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+                <key>NSExceptionMinimumTLSVersion</key>
+                <string>TLSv1.0</string>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+            </dict>
+        </dict>
+    </dict>
+    
+    <!-- Privacy Permissions -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app needs access to your photo library to select images for posting to Instagram and Discord.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>This app needs access to your camera to take photos for posting to Instagram and Discord.</string>
+    
+    <!-- Configuration Keys (to be filled with actual values) -->
+    <key>INSTAGRAM_CLIENT_ID</key>
+    <string>YOUR_INSTAGRAM_CLIENT_ID</string>
+    <key>INSTAGRAM_CLIENT_SECRET</key>
+    <string>YOUR_INSTAGRAM_CLIENT_SECRET</string>
+    <key>AWS_S3_BUCKET</key>
+    <string>YOUR_S3_BUCKET_NAME</string>
+    <key>AWS_REGION</key>
+    <string>us-east-1</string>
+    <key>AWS_ACCESS_KEY_ID</key>
+    <string>YOUR_AWS_ACCESS_KEY</string>
+    <key>AWS_SECRET_ACCESS_KEY</key>
+    <string>YOUR_AWS_SECRET_KEY</string>
+</dict>
+</plist>

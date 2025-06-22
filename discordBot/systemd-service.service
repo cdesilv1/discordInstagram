@@ -1,0 +1,26 @@
+[Unit]
+Description=Discord Instagram Bot
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/discord-instagram-bot
+ExecStart=/usr/bin/python3 -m bot
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables (can be overridden)
+Environment=ENVIRONMENT=prod
+Environment=PYTHONPATH=/home/ec2-user/discord-instagram-bot
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target
